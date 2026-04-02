@@ -1,0 +1,27 @@
+# Core ML & Audio
+torch>=2.0.0
+torchaudio>=2.0.0
+openai-whisper>=20231117
+librosa>=0.10.1
+soundfile>=0.12.1
+numpy>=1.24.0
+scipy>=1.11.0
+
+# NLP & Transformers
+transformers>=4.35.0
+datasets>=2.14.0
+sentencepiece>=0.1.99
+
+# Web & API
+flask>=3.0.0
+flask-cors>=4.0.0
+werkzeug>=3.0.0
+
+# Data & Utils
+pandas>=2.1.0
+scikit-learn>=1.3.0
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+
+# Audio generation (for demo)
+pydub>=0.25.1
