@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CallSense AI — Customer Satisfaction Intelligence</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!--stylesheet-->
+<link rel="stylesheet" href="./static/css/Style.css">
+
+<!--script-->
+<script src="./config.js"></script>
+<script src="./static/js/Scripts.js"></script>
+
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-mark">CS</div>
+    CallSense<span class="logo-sub">&nbsp;AI Platform</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" onclick="loadDemo()">⚡ Run Demo</button>
+    <label class="btn btn-primary" style="cursor:pointer;">
+      ↑ Upload Call
+      <input type="file" accept=".wav,.mp3,.m4a,.ogg,.flac,.webm" style="display:none" onchange="handleUpload(this)" />
+    </label>
+  </div>
+</header>
+
+<!-- ── Shell ───────────────────────────────────────────────────────────── -->
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <!-- Upload zone -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Analyze New Call</div>
+      <div class="upload-zone" id="dropZone">
+        <input type="file" accept=".wav,.mp3,.m4a,.ogg,.flac,.webm" onchange="handleUpload(this)" />
+        <div class="upload-icon">🎙️</div>
+        <div class="upload-label">Drop audio here or <span>browse</span></div>
+        <div class="upload-label" style="margin-top:4px; font-size:.68rem;">WAV · MP3 · M4A · FLAC · up to 100 MB</div>
+      </div>
+    </div>
+
+    <!-- Call list -->
+    <div class="sidebar-section" style="flex:1; min-height:0;">
+      <div class="sidebar-label">Analyzed Calls</div>
+      <div class="call-list" id="callList">
+        <div style="color:var(--text-mute); font-size:.78rem; padding:8px 4px;">No calls yet — run a demo or upload audio.</div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Score Tiers</div>
+      <div style="display:flex; flex-direction:column; gap:5px; font-size:0.75rem;">
+        <div style="display:flex; gap:8px; align-items:center;"><div class="call-dot excellent"></div><span>90–100 Excellent</span></div>
+        <div style="display:flex; gap:8px; align-items:center;"><div class="call-dot good"></div><span>75–89 Good</span></div>
+        <div style="display:flex; gap:8px; align-items:center;"><div style="width:8px;height:8px;border-radius:50%;background:var(--amber)"></div><span>55–74 Acceptable</span></div>
+        <div style="display:flex; gap:8px; align-items:center;"><div class="call-dot poor"></div><span>35–54 Poor</span></div>
+        <div style="display:flex; gap:8px; align-items:center;"><div class="call-dot critical"></div><span>0–34 Critical</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content area -->
+  <main class="main" id="mainContent">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-glyph">📞</div>
+      <h2>No call selected</h2>
+      <p>Upload a customer service call recording or run the demo to see the AI satisfaction analysis pipeline in action.</p>
+      <button class="btn btn-primary" onclick="loadDemo()">⚡ Run Demo Analysis</button>
+    </div>
+
+    <!-- Loader -->
+    <div class="loader" id="loader">
+      <div class="spin"></div>
+      <div>Analyzing call audio…</div>
+      <div class="loader-step" id="loaderStep">Initializing pipeline</div>
+    </div>
+
+    <!-- Results (hidden until analysis) -->
+    <div id="results" style="display:none; display:flex; flex-direction:column; gap:18px;">
+
+      <!-- Row 1: Score hero + alert -->
+      <div class="card" id="heroCard">
+        <div class="card-title">Customer Satisfaction Score</div>
+        <div class="score-hero">
+          <div class="score-ring-wrap">
+            <canvas id="scoreRingChart"></canvas>
+            <div class="score-number">
+              <div class="score-big" id="scoreBig">—</div>
+              <div class="score-denom">/100</div>
+            </div>
+          </div>
+          <div class="score-info">
+            <div class="score-tier" id="scoreTier">—</div>
+            <div class="score-summary-text" id="scoreSummaryText">—</div>
+          </div>
+          <div class="score-grade" id="scoreGrade">—</div>
+        </div>
+      </div>
+
+      <!-- Alert banner (shown conditionally) -->
+      <div class="alert-banner" id="alertBanner" style="display:none">
+        <div class="alert-icon" id="alertIcon">⚠️</div>
+        <div class="alert-body">
+          <div class="alert-title" id="alertTitle">Alert</div>
+          <div class="alert-reasons" id="alertReasons"></div>
+        </div>
+      </div>
+
+      <!-- Row 2: 4 stat tiles -->
+      <div class="grid-4">
+        <div class="stat-tile">
+          <div class="stat-label">Call Duration</div>
+          <div class="stat-value" id="statDuration">—</div>
+          <div class="stat-sub" id="statWords">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Text Sentiment</div>
+          <div class="stat-value" id="statSentiment">—</div>
+          <div class="stat-sub" id="statPolarity">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Voice Emotion</div>
+          <div class="stat-value" id="statVoiceEmotion">—</div>
+          <div class="stat-sub" id="statVoiceConf">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Speaking Rate</div>
+          <div class="stat-value" id="statSpeakRate">—</div>
+          <div class="stat-sub" id="statSilence">—</div>
+        </div>
+      </div>
+
+      <!-- Row 3: Sub-scores + Waveform -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Sub-Score Breakdown</div>
+          <div class="sub-score-row" id="subScoreRow"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Audio Waveform Envelope</div>
+          <div class="waveform-wrap" id="waveformWrap"></div>
+          <div style="margin-top:12px;">
+            <div class="card-title" style="margin-bottom:8px;">Audio Features</div>
+            <div class="feature-grid">
+              <div>Pitch (mean): <span class="mono-val" id="apPitch">—</span></div>
+              <div>Tempo: <span class="mono-val" id="apTempo">—</span></div>
+              <div>Spectral centroid: <span class="mono-val" id="apCentroid">—</span></div>
+              <div>Prosody score: <span class="mono-val" id="apProsody">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 4: Emotion charts -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Text Emotion Analysis</div>
+          <div class="chart-wrap"><canvas id="textEmotionChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Voice Emotion Analysis</div>
+          <div class="chart-wrap"><canvas id="voiceEmotionChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 5: Sentiment timeline + Keywords -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Conversation Timeline</div>
+          <div class="timeline" id="sentimentTimeline"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Detected Keywords</div>
+          <div style="margin-bottom:8px; font-size:.78rem; color:var(--text-dim);">Negative indicators</div>
+          <div class="chip-list" id="negChips"></div>
+          <div style="margin:12px 0 8px; font-size:.78rem; color:var(--text-dim);">Positive indicators</div>
+          <div class="chip-list" id="posChips"></div>
+          <div style="margin-top:16px;">
+            <div class="card-title" style="margin-bottom:8px;">AI Call Summary</div>
+            <div id="callSummary" style="font-size:.82rem; color:var(--text-dim); line-height:1.65;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 6: Transcript -->
+      <div class="card">
+        <div class="card-title">Full Transcript</div>
+        <div class="transcript-box" id="transcriptBox"></div>
+      </div>
+
+      <!-- Row 7: Recommendations + Agent -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Recommendations</div>
+          <div class="rec-list" id="recList"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Agent Performance</div>
+          <div class="agent-score-bar">
+            <div class="agent-score-num" id="agentScore">—</div>
+            <div class="agent-bar-wrap">
+              <div class="bar-track" style="height:10px;">
+                <div class="bar-fill" id="agentBar" style="width:0; background:var(--purple); height:100%;"></div>
+              </div>
+              <div style="font-size:.72rem; color:var(--text-dim); margin-top:4px;">Agent quality index</div>
+            </div>
+          </div>
+          <div class="agent-flags" id="agentFlags"></div>
+        </div>
+      </div>
+
+    </div><!-- /results -->
+  </main>
+</div>
+
+<style>
+.mono-val { font-family: var(--font-mono); color: var(--text); font-size: .78rem; }
+#results { display: flex !important; flex-direction: column; gap: 18px; }
+</style>
+
+
+
+</body>
+</html>
